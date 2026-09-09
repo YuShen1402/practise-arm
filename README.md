@@ -26,30 +26,28 @@ Built as a portfolio project to prepare for HiWi applications at RWTH Aachen.
 
 ## Project Structure
 
+​~~~
 practise-arm/
-├── practise_description/ # Robot description package
-│ ├── urdf/
-│ │ └── practise.xacro # 3-DOF SCARA + 2-finger gripper
-│ ├── launch/
-│ │ ├── display_launch.py # RViz only
-│ │ └── gazebo_launch.py # Gazebo integration (WIP)
-│ ├── practise_description/
-│ │ └── ex_practise_pick_and_place.py # Main pick-and-place script
-│ └── config/
-│ └── cotrollers.yaml
+├── practise_description/          # Robot description package
+│   ├── urdf/
+│   │   └── practise.xacro         # 3-DOF SCARA + 2-finger gripper
+│   ├── launch/
+│   │   ├── display_launch.py      # RViz only
+│   │   └── gazebo_launch.py       # Gazebo integration (WIP)
+│   ├── practise_description/
+│   │   └── ex_practise_pick_and_place.py   # Main pick-and-place script
+│   └── config/
+│       └── cotrollers.yaml
 │
-└── practise_movelt_config/ # MoveIt configuration
-├── config/
-│ ├── practise.srdf # Planning groups, disable_collisions
-│ ├── joint_limits.yaml
-│ ├── ros2_controllers.yaml
-│ └── ...
-└── launch/
-└── demo.launch.py # Full MoveIt system launcher
-
-
----
-
+└── practise_movelt_config/        # MoveIt configuration
+    ├── config/
+    │   ├── practise.srdf          # Planning groups, disable_collisions
+    │   ├── joint_limits.yaml
+    │   ├── ros2_controllers.yaml
+    │   └── ...
+    └── launch/
+        └── demo.launch.py         # Full MoveIt system launcher
+​~~~
 ## Prerequisites
 
 - Ubuntu 22.04
