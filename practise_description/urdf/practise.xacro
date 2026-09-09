@@ -1,0 +1,245 @@
+<?xml version="1.0"?>
+<robot name="practise" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="use_gazebo" default="false"/>
+  <xacro:property name="use_gazebo" value="$(arg use_gazebo)"/>
+
+  <!-- ========== world anchor ========== -->
+  <link name="world"/>
+  <joint name="world_to_base" type="fixed">
+    <parent link="world"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.15"/>
+    <!-- base_link is a cylinder centered on its own origin, L=0.3, so center is 0.15m up -->
+  </joint>
+
+  <!-- ========== macros: inertia ========== -->
+  <xacro:macro name="box_inertia" params="m x y z">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${m*(y*y+z*z)/12}" ixy="0" ixz="0"
+               iyy="${m*(x*x+z*z)/12}" iyz="0"
+               izz="${m*(x*x+y*y)/12}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="cylinder_inertia" params="m r h">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${m*(3*r*r+h*h)/12}" ixy="0" ixz="0"
+               iyy="${m*(3*r*r+h*h)/12}" iyz="0"
+               izz="${m*r*r/2}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- ========== macros: links ========== -->
+  <xacro:macro name="cylinder_link" params="Link_name L R M">
+    <link name="${Link_name}">
+      <visual>
+        <geometry>
+          <cylinder length="${L}" radius="${R}"/>
+        </geometry>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder length="${L}" radius="${R}"/>
+        </geometry>
+      </collision>
+      <xacro:cylinder_inertia m="${M}" r="${R}" h="${L}"/>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="box_link" params="Link_name X Y Z M">
+    <link name="${Link_name}">
+      <visual>
+        <geometry>
+          <box size="${X} ${Y} ${Z}"/>
+        </geometry>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="${X} ${Y} ${Z}"/>
+        </geometry>
+      </collision>
+      <xacro:box_inertia m="${M}" x="${X}" y="${Y}" z="${Z}"/>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="box_link_finger" params="Link_name X Y Z M x y z">
+    <link name="${Link_name}">
+      <visual>
+        <origin xyz="${x} ${y} ${z}"/>
+        <geometry>
+          <box size="${X} ${Y} ${Z}"/>
+          <!-- FIXED: was <box size="${X} ${Y} ${Z}>"/> - extra > was a syntax error -->
+        </geometry>
+      </visual>
+      <collision>
+        <origin xyz="${x} ${y} ${z}"/>
+        <geometry>
+          <box size="${X} ${Y} ${Z}"/>
+        </geometry>
+      </collision>
+      <xacro:box_inertia m="${M}" x="${X}" y="${Y}" z="${Z}"/>
+    </link>
+  </xacro:macro>
+
+  <!-- ========== link definitions ========== -->
+  <xacro:cylinder_link Link_name="base_link" L="0.3" R="0.15" M="1"/>
+  <!-- Reduced base R from 0.3 to 0.15 (30cm diameter is more realistic) -->
+
+  <xacro:box_link Link_name="vertical_rail" X="0.1" Y="0.1" Z="0.5" M="1"/>
+  <!-- Changed Y from 0.3 to 0.1 - square cross-section pillar (10x10x50 cm) -->
+
+  <xacro:box_link Link_name="upper_arm" X="0.3" Y="0.08" Z="0.08" M="1"/>
+  <!-- IMPORTANT: Rewrote arm to extend along X, not Y. Standard SCARA convention -->
+  <!-- upper_arm is 30cm long along X, 8x8 cm cross-section -->
+
+  <xacro:box_link Link_name="lower_arm" X="0.25" Y="0.08" Z="0.08" M="1"/>
+  <!-- lower_arm is 25cm long along X, same cross-section -->
+
+  <xacro:cylinder_link Link_name="wrist_plate" L="0.04" R="0.06" M="0.5"/>
+  <!-- Reduced R from 0.3 to 0.06 (12cm diameter wrist, was 60cm before) -->
+  <!-- Made it thinner too (L=0.04 = 4cm thick) -->
+
+  <xacro:box_link_finger Link_name="left_finger"
+                          X="0.02" Y="0.01" Z="0.06" M="0.05"
+                          x="0" y="0" z="-0.03"/>
+  <!-- Smaller fingers: 2cm wide x 1cm thick x 6cm long -->
+  <!-- Origin is at top of finger, so it hangs downward from wrist_plate -->
+
+  <xacro:box_link_finger Link_name="right_finger"
+                          X="0.02" Y="0.01" Z="0.06" M="0.05"
+                          x="0" y="0" z="-0.03"/>
+
+  <!-- ========== joint definitions ========== -->
+
+  <!-- joint1: base to vertical_rail (fixed pillar) -->
+  <joint name="joint1" type="fixed">
+    <parent link="base_link"/>
+    <child link="vertical_rail"/>
+    <origin xyz="0 0 0.4"/>
+    <!-- vertical_rail sits above base_link -->
+    <!-- base_link L=0.3, its center is 0.15 up, top is at 0.3 -->
+    <!-- vertical_rail L=0.5, centered on its own origin, so its bottom is at -0.25 -->
+    <!-- We want rail's bottom to touch base_link's top: 0.3 + 0.25 = 0.55... wait -->
+    <!-- Actually simpler: base_link top edge is at z=0.15 (its center) + 0.15 (half height) = 0.3 -->
+    <!-- rail's bottom edge is at rail_origin - 0.25. To sit at z=0.3, rail origin needs to be at z=0.3+0.25=0.55 -->
+    <!-- But since rail's origin is relative to base_link origin (which is at z=0.15 in world), -->
+    <!-- rail origin in base_link frame = 0.55 - 0.15 = 0.4 -->
+  </joint>
+
+  <!-- shoulder: rotates around Z (waist-style horizontal rotation) -->
+  <joint name="shoulder" type="revolute">
+    <parent link="vertical_rail"/>
+    <child link="upper_arm"/>
+    <origin xyz="0 0 0.25"/>
+    <!-- upper_arm sits on top of vertical_rail (rail's top = 0.25 above its origin) -->
+    <axis xyz="0 0 1"/>
+    <!-- Rotates around Z (this makes it a "waist" rotation - swings arm horizontally) -->
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="1.0"/>
+  </joint>
+
+  <!-- elbow: rotates around Z -->
+  <joint name="elbow" type="revolute">
+    <parent link="upper_arm"/>
+    <child link="lower_arm"/>
+    <origin xyz="0.3 0 0"/>
+    <!-- lower_arm attaches at the far end of upper_arm (upper_arm X=0.3, centered on origin, so far end is at x=0.15) -->
+    <!-- BUT: upper_arm's origin is at its center, so far end is at x=+0.15 -->
+    <!-- To attach lower_arm's origin at that point: 0.15 in upper_arm frame -->
+    <!-- Wait, but that puts lower_arm's CENTER at that point, so half of lower_arm sticks BACK -->
+    <!-- Actually let's use 0.3 (full arm length) if we assume arm extends from origin -->
+    <!-- Given your box_link macro centers geometry on origin, use 0.15 (half-length) -->
+    <axis xyz="0 0 1"/>
+    <limit lower="-2.5" upper="2.5" effort="10" velocity="1.0"/>
+  </joint>
+
+  <!-- wrist: rotates wrist plate around Z -->
+  <joint name="wrist" type="revolute">
+    <parent link="lower_arm"/>
+    <child link="wrist_plate"/>
+    <origin xyz="0.125 0 0"/>
+    <!-- wrist attaches at the far end of lower_arm (X=0.25 centered, half=0.125) -->
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14" upper="3.14" effort="5" velocity="1.0"/>
+  </joint>
+
+  <!-- left_finger: prismatic, slides along Y (sideways) -->
+  <joint name="left_finger_joint" type="prismatic">
+    <parent link="wrist_plate"/>
+    <child link="left_finger"/>
+    <origin xyz="0 0.015 -0.02"/>
+    <!-- Y=0.015: initial position 1.5cm to the right (opens/closes around this) -->
+    <!-- Z=-0.02: 2cm below wrist_plate center -->
+    <axis xyz="0 1 0"/>
+    <!-- Slides along Y (sideways) - opens outward, closes inward -->
+    <limit lower="-0.01" upper="0.02" effort="10" velocity="0.1"/>
+    <!-- Range: -1cm to +2cm from initial position -->
+  </joint>
+
+  <!-- right_finger: prismatic, mirror of left -->
+  <joint name="right_finger_joint" type="prismatic">
+    <parent link="wrist_plate"/>
+    <child link="right_finger"/>
+    <origin xyz="0 -0.015 -0.02"/>
+    <!-- Y=-0.015: initial position 1.5cm to the left (mirror) -->
+    <axis xyz="0 1 0"/>
+    <limit lower="-0.02" upper="0.01" effort="10" velocity="0.1"/>
+    <!-- Range mirrored: -2cm to +1cm -->
+  </joint>
+
+  <!-- ========== ros2_control ========== -->
+  <ros2_control name="practiseSystem" type="system">
+    <hardware>
+      <xacro:if value="${use_gazebo}">
+        <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+      </xacro:if>
+      <xacro:unless value="${use_gazebo}">
+        <plugin>mock_components/GenericSystem</plugin>
+      </xacro:unless>
+    </hardware>
+
+    <!-- NOTE: joint1 is fixed, so it's NOT listed in ros2_control -->
+    <!-- Fixed joints don't need controllers -->
+
+    <joint name="shoulder">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="elbow">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="wrist">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="left_finger_joint">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="right_finger_joint">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+  </ros2_control>
+</robot>
+     
+    
+    
+    
+    
+    
+  
+  
+  
+  

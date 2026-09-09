@@ -1,0 +1,22 @@
+# 编译产物 (colcon build 生成的)
+build/
+install/
+log/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 备份文件 (你 sed 时会生成)
+*.bak
+
+# 编辑器临时文件
+*.swp
+*~
+.vscode/
+.idea/
+
+# 系统文件
+.DS_Store
+Thumbs.db

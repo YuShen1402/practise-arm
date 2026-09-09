@@ -1,0 +1,8 @@
+# Default initial positions for practise's ros2_control fake system
+
+initial_positions:
+  elbow: 0
+  left_finger_joint: 0
+  right_finger_joint: 0
+  shoulder: 0
+  wrist: 0
